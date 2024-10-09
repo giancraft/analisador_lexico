@@ -100,7 +100,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             [
                 'q0' => ['==' => 'q120', '=' => 'q120', '+' => 'q1', '-' => 'q1', '*' => 'q1', '/' => 'q1', '%' => 'q1',
                          '(' => 'q1', ')' => 'q1', '[' => 'q1', ']' => 'q1', '{' => 'q1', '}' => 'q1', 
-                         '.' => 'q1', ',' => 'q1', ';' => 'q1', '!' => 'q1'],
+                         '.' => 'q1', ',' => 'q1', ';' => 'q1', '!' => 'q120', '"' => 'q1', "'" => 'q1',
+                        ':' => 'q1', '<' => 'q120', '>' => 'q120', '!=' => 'q120', '<=' => 'q120', '>=' => 'q120'],
                 'q120' => ['=' => 'q1']
             ]
         );
@@ -144,8 +145,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             }
             // Identificar operadores e pontuações
             else {
-                if ($sourceCode[$i] == '='){
-                    while ($i < $length && $sourceCode[$i] == '=') {
+                if ($sourceCode[$i] == '=' || $sourceCode[$i] == '!' || $sourceCode[$i] == '<' || $sourceCode[$i] == '>'){
+                    while ($i < $length && ($sourceCode[$i] == '=' || $sourceCode[$i] == '!' || $sourceCode[$i] == '<' || $sourceCode[$i] == '>')) {
                         $word .= $sourceCode[$i];
                         $i++;   
                     }
@@ -190,4 +191,3 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         echo "<h2>Erro:</h2><pre>{$e->getMessage()}</pre>";
     }
 }
-?>
