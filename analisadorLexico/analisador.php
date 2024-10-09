@@ -74,7 +74,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 'q61' => ['A' => 'q27'],
             ]
         );
-    
+
         // Autômato para identificadores
         $identificador = new Automato(
             'q0',
@@ -84,7 +84,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 'q1' => array_merge(array_fill_keys(range('a', 'z'), 'q1'), array_fill_keys(range('A', 'Z'), 'q1'), array_fill_keys(range('0', '9'), 'q1')),
             ]
         );
-    
+
         $constante = new Automato(
             'q0',
             ['q1'],
@@ -93,19 +93,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 'q1' => array_fill_keys(range('0', '9'), 'q1'),
             ]
         );
-    
+
         $operadores = new Automato(
             'q0',
             ['q1', 'q3', 'q120'],
             [
-                'q0' => ['==' => 'q120', '=' => 'q120', '+' => 'q1', '-' => 'q1', '*' => 'q1', '/' => 'q1', '%' => 'q1',
-                         '(' => 'q1', ')' => 'q1', '[' => 'q1', ']' => 'q1', '{' => 'q1', '}' => 'q1', 
-                         '.' => 'q1', ',' => 'q1', ';' => 'q1', '!' => 'q120', '"' => 'q1', "'" => 'q1',
-                        ':' => 'q1', '<' => 'q120', '>' => 'q120', '!=' => 'q120', '<=' => 'q120', '>=' => 'q120'],
+                'q0' => [
+                    '==' => 'q120', '=' => 'q120', '+' => 'q1', '-' => 'q1', '*' => 'q1', '/' => 'q1', '%' => 'q1',
+                    '(' => 'q1', ')' => 'q1', '[' => 'q1', ']' => 'q1', '{' => 'q1', '}' => 'q1', 
+                    '.' => 'q1', ',' => 'q1', ';' => 'q1', '!' => 'q120', '"' => 'q1', "'" => 'q1',
+                    ':' => 'q1', '<' => 'q120', '>' => 'q120', '!=' => 'q120', '<=' => 'q120', '>=' => 'q120'
+                ],
                 'q120' => ['=' => 'q1']
             ]
         );
-    
+
         return [
             'PALAVRARESERVADA' => $palavrasReservadas,
             'IDENTIFICADOR' => $identificador,
@@ -119,10 +121,71 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $automatos = criaAutomatos();
         $length = strlen($sourceCode);
         $i = 0;
+        $erros = [];
+        
+        $linha = 1;
+        $coluna = 1;
+    
+        // Definição das descrições dos operadores
+        $operadorDescricao = [
+            '(' => 'ABRE_PARENTESES',
+            ')' => 'FECHA_PARENTESES',
+            '{' => 'ABRE_CHAVES',
+            '}' => 'FECHA_CHAVES',
+            '[' => 'ABRE_COLCHETE',
+            ']' => 'FECHA_COLCHETE',
+            '+' => 'SOMA',
+            '-' => 'SUBTRACAO',
+            '*' => 'MULTIPLICACAO',
+            '/' => 'DIVISAO',
+            '%' => 'MODULO',
+            '=' => 'ATRIBUICAO',
+            '==' => 'IGUAL',
+            '!=' => 'DIFERENTE',
+            '<' => 'MENOR_QUE',
+            '>' => 'MAIOR_QUE',
+            '<=' => 'MENOR_OU_IGUAL',
+            '>=' => 'MAIOR_OU_IGUAL',
+            '!' => 'NEGACAO',
+            '.' => 'PONTO',
+            ',' => 'VIRGULA',
+            ';' => 'PONTO_E_VIRGULA',
+            ':' => 'DOIS_PONTOS',
+            '"' => 'ASPAS_DUPLAS',
+            "'" => 'ASPAS_SIMPLES',
+        ];
+    
+        // Definição das descrições das palavras reservadas
+        $palavraReservadaDescricao = [
+            'var' => 'Variavel',
+            'se' => 'Se',
+            'senao' => 'Senao',
+            'enquanto' => 'Enquanto',
+            'para' => 'Para',
+            'faca' => 'Faca',
+            'imprima' => 'Imprima',
+            'leia' => 'Leia',
+            'escreva' => 'Escreva',
+            'VAR' => 'Variavel',
+            'SE' => 'Se',
+            'SENAO' => 'Senao',
+            'ENQUANTO' => 'Enquanto',
+            'PARA' => 'Para',
+            'FACA' => 'Faca',
+            'IMPRIMA' => 'Imprima',
+            'LEIA' => 'Leia',
+            'ESCREVA' => 'Escreva',
+        ];
     
         while ($i < $length) {
             // Ignorar espaços e quebras de linha
             if (ctype_space($sourceCode[$i])) {
+                if ($sourceCode[$i] === "\n") {
+                    $linha++;
+                    $coluna = 1;
+                } else {
+                    $coluna++;
+                }
                 $i++;
                 continue;
             }
@@ -134,25 +197,29 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 while ($i < $length && ctype_alnum($sourceCode[$i])) {
                     $word .= $sourceCode[$i];
                     $i++;
+                    $coluna++;
                 }
-            }            
+            }
             // Identificar constantes numéricas
             elseif (ctype_digit($sourceCode[$i])) {
                 while ($i < $length && ctype_digit($sourceCode[$i])) {
                     $word .= $sourceCode[$i];
                     $i++;
+                    $coluna++;
                 }
             }
             // Identificar operadores e pontuações
             else {
-                if ($sourceCode[$i] == '=' || $sourceCode[$i] == '!' || $sourceCode[$i] == '<' || $sourceCode[$i] == '>'){
+                if ($sourceCode[$i] == '=' || $sourceCode[$i] == '!' || $sourceCode[$i] == '<' || $sourceCode[$i] == '>') {
                     while ($i < $length && ($sourceCode[$i] == '=' || $sourceCode[$i] == '!' || $sourceCode[$i] == '<' || $sourceCode[$i] == '>')) {
                         $word .= $sourceCode[$i];
-                        $i++;   
+                        $i++;
+                        $coluna++;
                     }
                 } else {
                     $word .= $sourceCode[$i];
                     $i++;
+                    $coluna++;
                 }
             }
     
@@ -161,32 +228,44 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             // Verificar o token correspondente nos autômatos
             foreach ($automatos as $token => $automato) {
                 if ($automato->executa($word)) {
-                    $tokens[] = [$token, $word];
-                    //echo "Token identificado: {$token} para a palavra '{$word}' \n";
+                    $descricao = isset($operadorDescricao[$word]) ? $operadorDescricao[$word] : (isset($palavraReservadaDescricao[$word]) ? $palavraReservadaDescricao[$word] : '');
+                    $tokens[] = [$token, $word, $descricao, $linha, $coluna - strlen($word)];
                     $found = true;
                     break;
                 }
             }
     
             if (!$found) {
-                throw new Exception("Erro léxico: token desconhecido '$word'");
+                $erros[] = "Erro léxico: token desconhecido '$word' na linha $linha, coluna $coluna";
             }
         }
     
-        return $tokens;
+        return ['tokens' => $tokens, 'erros' => $erros];
     }
+    
 
     // Obter o código fonte do formulário
     $sourceCode = $_POST['sourceCode'] ?? '';
 
     try {
-        $tokens = lexer($sourceCode);
+        $resultado = lexer($sourceCode);
+        $tokens = $resultado['tokens'];
+        $erros = $resultado['erros'];
 
         echo "<h2>Tokens Encontrados:</h2><pre>";
         foreach ($tokens as $token) {
-            echo "{$token[0]}: {$token[1]}\n";
+            echo ($token[2] ? "{$token[2]}" : $token[0]) . ": {$token[1]}\n";
         }
-        echo "</pre>";        
+        echo "</pre>";
+
+        // Exibir erros encontrados
+        if (!empty($erros)) {
+            echo "<h2>Erros Encontrados:</h2><pre>";
+            foreach ($erros as $erro) {
+                echo "$erro\n";
+            }
+            echo "</pre>";
+        }
     } catch (Exception $e) {
         echo "<h2>Erro:</h2><pre>{$e->getMessage()}</pre>";
     }
